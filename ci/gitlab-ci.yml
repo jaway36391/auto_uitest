@@ -1,0 +1,60 @@
+# Exchange UI Patrol - GitLab CI/CD 配置
+# 定时巡检 + 手动触发，支持多环境切换
+#
+# 使用方法：
+# 1. 将此文件内容合并到项目根目录的 .gitlab-ci.yml
+# 2. 在 GitLab 项目 Settings → CI/CD → Variables 中配置所需变量
+# 3. 在 CI/CD → Schedules 中创建定时任务（每30分钟）
+
+stages:
+  - patrol
+
+variables:
+  PATROL_ENV: "staging"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+
+patrol_test:
+  stage: patrol
+  image: python:3.11
+  timeout: 15 minutes
+
+  variables:
+    PATROL_TEST_USERNAME: $PATROL_TEST_USERNAME
+    PATROL_TEST_PASSWORD: $PATROL_TEST_PASSWORD
+    PATROL_TOTP_SECRET: $PATROL_TOTP_SECRET
+    PATROL_DEVICE_ID: $PATROL_DEVICE_ID
+    PATROL_AUTH_TOKEN: $PATROL_AUTH_TOKEN
+    PATROL_WECOM_WEBHOOK_URL: $PATROL_WECOM_WEBHOOK_URL
+
+  cache:
+    key: pip-cache
+    paths:
+      - .pip-cache/
+
+  before_script:
+    - pip install -e ".[dev]"
+    - playwright install --with-deps chromium
+
+  script:
+    - |
+      pytest tests/ \
+        -m "health_check or ui_elements" \
+        --env=${PATROL_ENV} \
+        --alluredir=reports/allure-results
+
+  artifacts:
+    when: always
+    paths:
+      - reports/allure-results/
+    expire_in: 30 days
+    reports:
+      junit: reports/allure-results/*.xml
+
+  rules:
+    # 定时触发
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # 手动触发
+    - if: $CI_PIPELINE_SOURCE == "web"
+    # 合并请求时不自动运行
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual

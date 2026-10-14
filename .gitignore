@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment files (keep .env.example as template)
+.env
+config/environments/.env.production
+config/environments/.env.staging
+config/auth_state.json
+config/local_storage.json
+
+# Test reports and results
+reports/
+allure-results/
+.pytest_cache/
+
+# Type checking and linting caches
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
